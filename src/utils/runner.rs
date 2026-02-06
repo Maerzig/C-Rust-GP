@@ -1,5 +1,6 @@
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
+use crate::components::evo_operators_for_population::selection_operators::selection_types::SelectionTypes;
 // use rand::prelude::ThreadRng;
 use crate::global_params::CgpParameters;
 use crate::components::cgp_components::chromosome::Chromosome;
@@ -48,8 +49,17 @@ where
             eval_data = Some(transpose(eval_data.unwrap()));
         }
 
-        let mut population: Vec<Chromosome> = Vec::with_capacity(params.elitists + params.population_size);
-        let mut fitness_vals: Vec<f32> = Vec::with_capacity(params.elitists + params.population_size);
+        let mut population: Vec<Chromosome>;
+        let mut fitness_vals: Vec<f32>;
+        let is_saga = params.selection_type == SelectionTypes::SAGA4Random || params.selection_type == SelectionTypes::SAGA4Full || params.selection_type == SelectionTypes::SAGA4ParentTournament || params.selection_type == SelectionTypes::SAGA4SurvivorTournament;
+        if is_saga {
+            // Allocate space for the maximum possible amount of individuals ahead of time; I believe this is more efficient than reallocating every time the population grows
+            population = Vec::with_capacity(params.population_size * 15); 
+            fitness_vals = Vec::with_capacity(params.population_size * 15);
+        } else {
+            population = Vec::with_capacity(params.elitists + params.population_size);
+            fitness_vals = Vec::with_capacity(params.elitists + params.population_size);
+        }
 
         for _ in 0..(params.elitists + params.population_size) {
             let mut chromosome = Chromosome::new(

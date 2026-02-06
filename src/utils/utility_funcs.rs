@@ -90,3 +90,18 @@ pub fn get_float_iterator(start: f32, threshold: f32, step_size: f32) -> impl It
         (next < threshold).then_some(next)
     })
 }
+
+pub fn get_median_from_sorted(numbers: &Vec<f32>) -> Option<f32> {
+    let len = numbers.len();
+    if len == 0 {
+        return None;
+    }
+    let mid = len/2;
+    if len % 2 == 0 {
+        let low = numbers[mid - 1];
+        let high = numbers[mid];
+        Some((low + high) / 2.0)
+    } else {
+        Some(numbers[mid])
+    }
+}

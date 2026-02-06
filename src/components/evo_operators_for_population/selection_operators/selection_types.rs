@@ -7,6 +7,10 @@ pub enum SelectionTypes {
     MuPlusLambda,
     MuCommaLambda,
     Tournament,
+    SAGA4Random,
+    SAGA4ParentTournament,
+    SAGA4SurvivorTournament,
+    SAGA4Full,
 }
 
 impl Display for SelectionTypes {
@@ -16,6 +20,10 @@ impl Display for SelectionTypes {
             SelectionTypes::MuPlusLambda => write!(f, "MuPlusLambda"),
             SelectionTypes::MuCommaLambda => write!(f, "MuCommaLambda"),
             SelectionTypes::Tournament => write!(f, "Tournament"),
+            SelectionTypes::SAGA4Random => write!(f, "SAGA4Random"),
+            SelectionTypes::SAGA4ParentTournament => write!(f, "Saga4ParentTournament"),
+            SelectionTypes::SAGA4SurvivorTournament => write!(f, "Saga4SurvivorTournament"),
+            SelectionTypes::SAGA4Full => write!(f, "SAGA4Full"),
         }
     }
 }

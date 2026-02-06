@@ -9,6 +9,7 @@ pub trait ClonePopulation<T> where T: Clone
 }
 
 pub struct CloneParentToChild;
+pub struct CloneParentToChildFull;
 
 /// Must be used when no crossover is applied
 /// Similar outcome can be achieved by setting `crossover_rate = 0`. But that's more efficient I think
@@ -32,6 +33,24 @@ impl<T: Clone> ClonePopulation<T> for CloneParentToChild {
                 parent_id = *runner.elitist_ids.choose(&mut rng).unwrap();
             }
             runner.population[*id] = runner.population[parent_id].clone();
+        }
+    }
+}  
+
+// Assumes that the selection function already dealt with dead individuals and copies everything so the children can be mutated in the next step
+impl<T: Clone> ClonePopulation<T> for CloneParentToChildFull {
+    fn new() -> Box<dyn ClonePopulation<T>> where Self: Sized {
+        Box::new(Self)
+    }
+
+    fn execute(&self, runner: &mut ProgramState<T>) {
+        let current_pop_size = runner.population.len();
+
+        for parent_id in 0..current_pop_size {
+            let mut child = runner.population[parent_id].clone();
+            child.age = 3; // Used for SAGA4 types of selection
+            runner.population.push(child);
+            runner.fitness_vals.push(runner.fitness_vals[parent_id]);
         }
     }
 }

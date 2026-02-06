@@ -16,12 +16,14 @@ pub struct Chromosome
     pub nodes_grid: Vec<CGPNode>,
     pub active_nodes: Vec<usize>,
     pub cgp_edges: Option<CGPEdges>, // only used for DAG
+    pub age: isize, // only used for SAGA4 selection
 }
 
 
 
 impl Chromosome {
     pub fn new(params: CgpParameters) -> Self {
+        let age: isize = 3;
         let mut nodes_grid: Vec<CGPNode> = vec![];
         nodes_grid.reserve(params.nbr_inputs + params.graph_width + params.nbr_outputs);
 
@@ -73,6 +75,7 @@ impl Chromosome {
             nodes_grid,
             active_nodes: vec![],
             cgp_edges,
+            age,
         }
     }
 }

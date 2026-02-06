@@ -126,6 +126,10 @@ pub struct SelectionArgs {
         - MuPlusLambda,
         - MuCommaLambda (including elitists),
         - Tournament (includes elitists; tournament draws from both elitists and normal population),
+        - SAGA4Full (selection based on age alone, all survivors are parents),
+        - SAGA4Random (random selection),
+        - SAGA4ParentTournament (parent tournament selection),
+        - SAGA4SurvivorTournament (survivor tournament selection)
         ")]
     pub selection_type: String,
 

@@ -16,7 +16,11 @@ use crate::components::evo_operators_for_population::mutation_operators::mutatio
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_mucommalambda::PopulationElitistSelectionMuCommaLambda;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_mupluslambda::PopulationElitistSelectionMuPlusLambda;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_oneplusfour::PopulationElitistSelectionOnePlusFour;
+use crate::components::evo_operators_for_population::selection_operators::elitist_selection_saga4_survivor_tournament::PopulationSelectionSAGA4SurvivorTournament;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_tournament::PopulationElitistSelectionWithTournament;
+use crate::components::evo_operators_for_population::selection_operators::elitist_selection_saga4_random::PopulationSelectionSAGA4Random;
+use crate::components::evo_operators_for_population::selection_operators::elitist_selection_saga4_parent_tournament::PopulationSelectionSAGA4ParentTournament;
+use crate::components::evo_operators_for_population::selection_operators::selection_saga4_full::PopulationSelectionSAGA4Full;
 use crate::components::evo_operators_for_population::selection_operators::selection_trait::PopulationGeneralSelection;
 use crate::components::evo_operators_for_population::selection_operators::selection_types::SelectionTypes;
 use crate::global_params::CgpParameters;
@@ -45,6 +49,10 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         "MuPlusLambda" => SelectionTypes::MuPlusLambda,
         "MuCommaLambda" => SelectionTypes::MuCommaLambda,
         "Tournament" => SelectionTypes::Tournament,
+        "SAGA4Random" => SelectionTypes::SAGA4Random,
+        "SAGA4ParentTournament" => SelectionTypes::SAGA4ParentTournament,
+        "SAGA4SurvivorTournament" => SelectionTypes::SAGA4SurvivorTournament,
+        "SAGA4Full" => SelectionTypes::SAGA4Full,
         _ => { panic!("Unsupported selection type") }
     };
     check_selection_args_validity(args);
@@ -103,6 +111,9 @@ fn check_selection_args_validity(args: &Cli) {
         "OnePlusFour" => {
             assert_eq!(1, args.selection_args.elitism_number, "For (1+4)-ES, elitism-number must be 1");
             assert_eq!(4, args.selection_args.population_size, "For (1+4)-ES, population-size must be 4");
+        },
+        "SAGA4SurvivorTournament" | "SAGA4ParentTournament" => {
+            assert_ne!(0, args.selection_args.tournament_size, "Tournament size cannot be 0 for tournament based selection methods");
         }
         _ => {}
     };
@@ -151,6 +162,10 @@ pub fn get_population_selection_operator<T: Clone>(params: &CgpParameters) -> Bo
         SelectionTypes::MuPlusLambda => PopulationElitistSelectionMuPlusLambda::new(),
         SelectionTypes::MuCommaLambda => PopulationElitistSelectionMuCommaLambda::new(),
         SelectionTypes::Tournament => PopulationElitistSelectionWithTournament::new(),
+        SelectionTypes::SAGA4Random => PopulationSelectionSAGA4Random::new(),
+        SelectionTypes::SAGA4ParentTournament => PopulationSelectionSAGA4ParentTournament::new(),
+        SelectionTypes::SAGA4SurvivorTournament => PopulationSelectionSAGA4SurvivorTournament::new(),
+        SelectionTypes::SAGA4Full => PopulationSelectionSAGA4Full::new(),
     }
 }
 
@@ -162,6 +177,10 @@ pub fn get_population_crossover_operator<T: Clone>(params: &CgpParameters) -> (B
         SelectionTypes::MuPlusLambda => PopulationCrossoverMuLambdaElitist::new(),
         SelectionTypes::MuCommaLambda => PopulationCrossoverMuLambdaElitist::new(),
         SelectionTypes::Tournament => PopulationCrossoverTournament::new(),
+        SelectionTypes::SAGA4Random => panic!("Wrong Selection type for crossover"),
+        SelectionTypes::SAGA4ParentTournament => panic!("Wrong Selection type for crossover"),
+        SelectionTypes::SAGA4SurvivorTournament => panic!("Wrong Selection type for crossover"),
+        SelectionTypes::SAGA4Full => panic!("Wrong Selection type for crossover"),
     };
 
     let crossover_operator = match params.crossover_type {
