@@ -124,6 +124,7 @@ pub struct SelectionArgs {
         help = "Default options include:
         - OnePlusFour,
         - MuPlusLambda,
+        - MuCommaLambda (including elitists),
         - Tournament (includes elitists; tournament draws from both elitists and normal population),
         ")]
     pub selection_type: String,
@@ -136,6 +137,11 @@ pub struct SelectionArgs {
     Case Tournament: Number of elitists -> Total Population = Elitism-Number + Population-size
     ")]
     pub elitism_number: usize,
+
+    #[arg(long, default_value_t = 3, help = "Relevant for MuCommaLambda and the elitist SAGA variants
+    Decides how many of the parents of the old generations are carried over as elitists.
+    ")]
+    pub parent_elitists: usize,
 
     #[arg(long, default_value_t = 4, help = "Relevant for MuPlusLambda and Tournament Selection.
     Case MuPlusLambda: Lambda==Population-size

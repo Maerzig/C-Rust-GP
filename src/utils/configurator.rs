@@ -13,6 +13,7 @@ use crate::components::evo_operators_for_population::evaluation_operators::eval_
 use crate::components::evo_operators_for_population::evaluation_operators::eval_population_oneplusfour::{PopulationForwardPassOnePlusFour};
 use crate::components::evo_operators_for_population::evaluation_operators::eval_population_trait::{PopulationGeneralForwardPass};
 use crate::components::evo_operators_for_population::mutation_operators::mutation_types::MutationTypes;
+use crate::components::evo_operators_for_population::selection_operators::elitist_selection_mucommalambda::PopulationElitistSelectionMuCommaLambda;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_mupluslambda::PopulationElitistSelectionMuPlusLambda;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_oneplusfour::PopulationElitistSelectionOnePlusFour;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_tournament::PopulationElitistSelectionWithTournament;
@@ -42,6 +43,7 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
     let selection_type = match args.selection_args.selection_type.as_str() {
         "OnePlusFour" => SelectionTypes::OnePlusFour,
         "MuPlusLambda" => SelectionTypes::MuPlusLambda,
+        "MuCommaLambda" => SelectionTypes::MuCommaLambda,
         "Tournament" => SelectionTypes::Tournament,
         _ => { panic!("Unsupported selection type") }
     };
@@ -78,6 +80,7 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         // selection related parameters
         selection_type,
         elitists: args.selection_args.elitism_number,
+        parent_elitists: args.selection_args.parent_elitists,
         population_size: args.selection_args.population_size,  // total pop-number: #elitsts + pop-size
         tournament_size: args.selection_args.tournament_size,
 
@@ -103,6 +106,7 @@ fn check_selection_args_validity(args: &Cli) {
         }
         _ => {}
     };
+    assert!(args.selection_args.parent_elitists < args.selection_args.elitism_number, "Cannot carry over more or only elitists into the new generation");
 }
 
 
@@ -145,6 +149,7 @@ pub fn get_population_selection_operator<T: Clone>(params: &CgpParameters) -> Bo
     match params.selection_type {
         SelectionTypes::OnePlusFour => PopulationElitistSelectionOnePlusFour::new(),
         SelectionTypes::MuPlusLambda => PopulationElitistSelectionMuPlusLambda::new(),
+        SelectionTypes::MuCommaLambda => PopulationElitistSelectionMuCommaLambda::new(),
         SelectionTypes::Tournament => PopulationElitistSelectionWithTournament::new(),
     }
 }
@@ -155,6 +160,7 @@ pub fn get_population_crossover_operator<T: Clone>(params: &CgpParameters) -> (B
     let crossover_population_mechanism = match params.selection_type {
         SelectionTypes::OnePlusFour => panic!("Wrong Selection type for crossover"),
         SelectionTypes::MuPlusLambda => PopulationCrossoverMuLambdaElitist::new(),
+        SelectionTypes::MuCommaLambda => PopulationCrossoverMuLambdaElitist::new(),
         SelectionTypes::Tournament => PopulationCrossoverTournament::new(),
     };
 

@@ -27,6 +27,8 @@ pub struct CgpParameters {
     // case 2: tournament: population-size
     pub population_size: usize,
     pub tournament_size: usize,
+    // Decides how many of the old parents are preserved as elitists
+    pub parent_elitists: usize,
 
     // mutation related parameters
     pub mutation_type: MutationTypes,

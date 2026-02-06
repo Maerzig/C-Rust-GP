@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum SelectionTypes {
     OnePlusFour,
     MuPlusLambda,
+    MuCommaLambda,
     Tournament,
 }
 
@@ -13,6 +14,7 @@ impl Display for SelectionTypes {
         match self {
             SelectionTypes::OnePlusFour => write!(f, "OnePlusFour"),
             SelectionTypes::MuPlusLambda => write!(f, "MuPlusLambda"),
+            SelectionTypes::MuCommaLambda => write!(f, "MuCommaLambda"),
             SelectionTypes::Tournament => write!(f, "Tournament"),
         }
     }
