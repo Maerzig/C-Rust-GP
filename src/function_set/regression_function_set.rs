@@ -46,7 +46,7 @@ impl Function<f32> for RegressionAdd {
         return input0
             .iter()
             .zip(input1.iter())
-            .map(|(a, b)| *a + *b)
+            .map(|(a, b)| (*a + *b).clamp(-1e15, 1e15))
             .collect();
     }
 }
@@ -63,7 +63,7 @@ impl Function<f32> for RegressionSub {
         return input0
             .iter()
             .zip(input1.iter())
-            .map(|(a, b)| *a - *b)
+            .map(|(a, b)| (*a - *b).clamp(-1e15,1e15))
             .collect();
     }
 }
@@ -80,7 +80,7 @@ impl Function<f32> for RegressionMul {
         return input0
             .iter()
             .zip(input1.iter())
-            .map(|(a, b)| *a * *b)
+            .map(|(a, b)| (*a * *b).clamp(-1e15, 1e15))
             .collect();
     }
 }
@@ -101,7 +101,7 @@ impl Function<f32> for RegressionDiv {
                 if float_eq!(*b, 0.0, abs <= 0.000_1) {
                     1.
                 } else {
-                    a / b
+                    (a / b).clamp(-1e15, 1e15)
                 }
             })
             .collect();
@@ -111,16 +111,14 @@ impl Function<f32> for RegressionDiv {
 impl Function<f32> for RegressionSin {
 
     fn get_number_inputs_needed(&self) -> usize {
-        2
+        1
     }
 
     fn execute_function(&self, inputs: &[&Vec<f32>]) -> Vec<f32> {
         let input0 = inputs[0];
-        let input1 = inputs[1];
         return input0
             .iter()
-            .zip(input1.iter())
-            .map(|(a, b)| *a + *b)
+            .map(|x| x.sin())
             .collect();
     }
 }
@@ -135,7 +133,7 @@ impl Function<f32> for RegressionCos {
         let input0 = inputs[0];
         return input0
             .iter()
-            .map(|x| x.sin())
+            .map(|x| x.cos())
             .collect();
     }
 }
@@ -171,7 +169,7 @@ impl Function<f32> for RegressionExp {
         let input0 = inputs[0];
         return input0
             .iter()
-            .map(|x| x.exp())
+            .map(|x| x.exp().clamp(-1e15, 1e15))
             .collect();
     }
 }
