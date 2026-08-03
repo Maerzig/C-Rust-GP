@@ -1,8 +1,8 @@
 use std::iter::Iterator;
 
-use rand;
+use rand::{self, SeedableRng};
 use rand::prelude::SliceRandom;
-use rand::thread_rng;
+use rand::rngs::StdRng;
 
 
 pub struct CrossValidation {
@@ -12,9 +12,9 @@ pub struct CrossValidation {
 
 
 impl CrossValidation {
-    pub fn new(n_samples: usize, n_folds: usize) -> Self {
+    pub fn new(n_samples: usize, n_folds: usize, seed: u64) -> Self {
         let mut indices: Vec<usize> = (0..n_samples).collect();
-        let mut rng = thread_rng();
+        let mut rng = StdRng::seed_from_u64(seed);
 
         indices.shuffle(&mut rng);
 
@@ -38,12 +38,12 @@ impl CrossValidation {
         }
     }
 
-    pub fn split(&mut self, mut dataset: Vec<Vec<f32>>, mut label: Vec<usize>)
-                 -> (Vec<Vec<f32>>, Vec<usize>, Vec<Vec<f32>>, Vec<usize>) {
+    pub fn split<T>(&mut self, mut dataset: Vec<Vec<f32>>, mut label: Vec<T>)
+                 -> (Vec<Vec<f32>>, Vec<T>, Vec<Vec<f32>>, Vec<T>) {
         let indices = &self.fold_indices[self.current_fold];
 
         let mut new_test_data: Vec<Vec<f32>> = vec![];
-        let mut new_test_labels: Vec<usize> = vec![];
+        let mut new_test_labels: Vec<T> = vec![];
 
         for index in indices {
             new_test_data.push(dataset.swap_remove(*index));
