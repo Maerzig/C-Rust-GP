@@ -44,13 +44,11 @@ impl<T: Clone> ClonePopulation<T> for CloneParentToChildFull {
     }
 
     fn execute(&self, runner: &mut ProgramState<T>) {
-        let current_pop_size = runner.population.len();
-
-        for parent_id in 0..current_pop_size {
-            let mut child = runner.population[parent_id].clone();
+        for parent_id in &runner.elitist_ids { // Elitists_ids is used to determine parents of the next generation
+            let mut child = runner.population[*parent_id].clone();
             child.age = 3; // Used for SAGA4 types of selection
             runner.population.push(child);
-            runner.fitness_vals.push(runner.fitness_vals[parent_id]);
+            runner.fitness_vals.push(runner.fitness_vals[*parent_id]);
         }
     }
 }

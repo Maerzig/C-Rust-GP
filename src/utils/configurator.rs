@@ -117,7 +117,7 @@ fn check_selection_args_validity(args: &Cli) {
         }
         _ => {}
     };
-    assert!(args.selection_args.parent_elitists < args.selection_args.elitism_number, "Cannot carry over more or only elitists into the new generation");
+    
 }
 
 

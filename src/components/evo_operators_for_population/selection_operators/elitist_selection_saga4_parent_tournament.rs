@@ -8,7 +8,7 @@ use crate::utils::utility_funcs::get_median_from_sorted;
 
 pub struct PopulationSelectionSAGA4ParentTournament;
 
-/// Based on approach taken by Heider et al. in https://doi.org/10.1109/CEC60901.2024.10612101
+/// Based on approach taken by Smętek et al. in 10.1007/978-3-642-21219-2_16
 /// Population is adapted by assigning an age attribute to each chromosome with the following rules:
 /// * All chromosomes start with an age of 3
 /// * The age of a chromosome gets reduced by one with each generation
@@ -33,6 +33,8 @@ impl<T: Clone> PopulationGeneralSelection<T> for PopulationSelectionSAGA4ParentT
         } else {
             pop_control_fitness_threshold = *runner.fitness_vals_sorted.last().unwrap();
         }
+        // Track which individuals are children before age based elimination changes ids
+        let mut is_child: Vec<bool> = (0..current_pop_size).map(|i| runner.child_ids.contains(&i)).collect();
 
         //Run through the population backwards to ensure removing individuals doesn't throw off the ID of individuals that haven't been processed yet
         for id in (0..current_pop_size).rev() {
@@ -50,71 +52,57 @@ impl<T: Clone> PopulationGeneralSelection<T> for PopulationSelectionSAGA4ParentT
             if runner.population[id].age <= 0 {
                 runner.population.swap_remove(id);
                 runner.fitness_vals.swap_remove(id);
+                is_child.swap_remove(id);
             }
         }
 
         current_pop_size = runner.population.len();
         let mut rng = rand::thread_rng();
-        let mut selection = vec![];
-        let mut keep_mask: Vec<bool> = vec![false; current_pop_size];
+        let parent_count = min(runner.params.population_size + runner.params.elitists, current_pop_size); // Runner.params.population_size = initial pop size
+        let mut parent_ids: Vec<usize> = Vec::with_capacity(parent_count);
 
-        // Make sure the best parent_elitists individuals are carried over as elitists
+        // Choose elitists
+        // Make sure the best individuals are carried over as elitists
         let mut indexed_fitness: Vec<(usize, f32)> = runner.fitness_vals.iter()
             .enumerate()
             .map(|(i, &f)| (i,f))
             .collect();
         indexed_fitness.sort_by(|a,b| a.1.partial_cmp(&b.1).unwrap());
-        let nmbr_elitists = min(runner.params.parent_elitists, current_pop_size);
+        let nmbr_elitists = min(runner.params.elitists, current_pop_size);
 
         for i in 0..nmbr_elitists {
             let (elitist_id, _) = indexed_fitness[i];
-            selection.push(elitist_id);
+            parent_ids.push(elitist_id);
         }
 
-        // Parent Tournament selection
-        // Then make a mask and eliminate all individuals that aren't parents by swapping the parents to the front and then truncating
-        // I believe this is a relatively efficient way to go about this since it doesn't involve a lot of reallocating memory or copying individuals
-        let tournament_candidate_indices: Vec<usize> = (0..current_pop_size)
-            .filter(|&i| !selection.contains(&i))
+        // Tournament selection of parents only from individuals that were NOT children in this generation
+        let mut candidates: Vec<usize> = (0..current_pop_size)
+            .filter(|&i| !parent_ids.contains(&i) && !is_child[i])
             .collect();
 
-        if !tournament_candidate_indices.is_empty() {
-            for _ in 0..current_pop_size - nmbr_elitists {
-                let winner_id = tournament_candidate_indices
-                    .iter()
-                    .choose_multiple(&mut rng, runner.params.tournament_size)
-                    .into_iter()
-                    .min_by(|&&a, &&b| {
-                        runner.fitness_vals[a].partial_cmp(&runner.fitness_vals[b]).unwrap()
-                    })
-                    .map(|&id| id)
-                    .unwrap();
-
-                selection.push(winner_id);
+        for _ in 0..parent_count - nmbr_elitists {
+            if candidates.is_empty() {
+                break;
             }
+
+            let t_size = min(runner.params.tournament_size, candidates.len());
+
+            let winner_idx = (0..candidates.len())
+                .choose_multiple(&mut rng, t_size)
+                .into_iter()
+                .min_by(|&a, &b| {
+                    runner.fitness_vals[candidates[a]]
+                        .partial_cmp(&runner.fitness_vals[candidates[b]])
+                        .unwrap()
+                })
+                .unwrap();
+
+            let winner_id = candidates.swap_remove(winner_idx);
+            parent_ids.push(winner_id);
         }
-        
-        for i in selection {
-            keep_mask[i] = true;
-        }
+        runner.elitist_ids = parent_ids;
 
-        let mut write_index = 0;
-
-        for read_index in 0..current_pop_size {
-            if keep_mask[read_index] {
-                if read_index != write_index {
-                    runner.population.swap(read_index, write_index);
-                    runner.fitness_vals.swap(read_index, write_index);
-                }
-                write_index+=1;
-            }
-        }
-
-        runner.population.truncate(write_index);
-        runner.fitness_vals.truncate(write_index);
-
-        current_pop_size = runner.population.len();
-        let child_ids: Vec<usize> = (current_pop_size..current_pop_size * 2).collect();
+        let child_ids: Vec<usize> = (current_pop_size..current_pop_size + runner.elitist_ids.len()).collect();
         runner.child_ids = child_ids;
     }
 }

@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use rand::seq::IteratorRandom;
+use rand::seq::SliceRandom;
 
 use crate::components::evo_operators_for_population::selection_operators::selection_trait::PopulationGeneralSelection;
 use crate::utils::runner::ProgramState;
@@ -8,14 +8,15 @@ use crate::utils::utility_funcs::get_median_from_sorted;
 
 pub struct PopulationSelectionSAGA4Random;
 
-/// Based on approach taken by Heider et al. in https://doi.org/10.1109/CEC60901.2024.10612101
+/// Based on approach taken by Smętek et al. in 10.1007/978-3-642-21219-2_16
 /// Population is adapted by assigning an age attribute to each chromosome with the following rules:
 /// * All chromosomes start with an age of 3
 /// * The age of a chromosome gets reduced by one with each generation
 /// * A chromosome whose age drops to 0 is eliminated
 /// * All individuals above median fitness receive an extra generation to live
 /// * Should the population become too large (10 times the original size) all individuals below a dynamic fitness threshold lose two generations
-/// Only a fixed amount of individuals of each generation are made parents; they are decided by random selection + elitism
+/// Parents are decided by random selection
+/// NEEDS the full clone option from clone_parent_to_child.rs
 impl<T: Clone> PopulationGeneralSelection<T> for PopulationSelectionSAGA4Random {
     fn new() -> Box<dyn PopulationGeneralSelection<T>> where Self: Sized {
         Box::new(Self)
@@ -52,54 +53,35 @@ impl<T: Clone> PopulationGeneralSelection<T> for PopulationSelectionSAGA4Random 
             }
         }
 
-        // Randomly choose a fixed amount of IDs within the population to be parents
-        // Then make a mask and eliminate all individuals that aren't parents by swapping the parents to the front and then truncating
-        // I believe this is a relatively efficient way to go about this since it doesn't involve a lot of reallocating memory or copying individuals
         current_pop_size = runner.population.len();
         let mut rng = rand::thread_rng();
-        let mut parent_ids = Vec::with_capacity(current_pop_size);
-        let mut keep_mask: Vec<bool> = vec![false; current_pop_size];
+        let parent_count = min(runner.params.population_size + runner.params.elitists, current_pop_size); // Runner.params.population_size = initial pop size
+        let mut parent_ids: Vec<usize> = Vec::with_capacity(parent_count); //(0..current_pop_size).choose_multiple(&mut rng, parent_count);
 
-        // Make sure the best parent_elitists individuals are carried over as elitists
+        // Choose elitists
+        // Make sure the best individuals are carried over as elitists
         let mut indexed_fitness: Vec<(usize, f32)> = runner.fitness_vals.iter()
             .enumerate()
             .map(|(i, &f)| (i,f))
             .collect();
         indexed_fitness.sort_by(|a,b| a.1.partial_cmp(&b.1).unwrap());
-        let nmbr_elitists = min(runner.params.parent_elitists, current_pop_size);
-        
+        let nmbr_elitists = min(runner.params.elitists, current_pop_size);
+
         for i in 0..nmbr_elitists {
             let (elitist_id, _) = indexed_fitness[i];
             parent_ids.push(elitist_id);
         }
 
-        // Fill the remaining parent slots with random individuals that aren't already included
-        let remaining_indices: Vec<usize> = (0..current_pop_size)
-            .filter(|i| !parent_ids.contains(i))
-            .choose_multiple(&mut rng, runner.params.elitists - nmbr_elitists);
-        parent_ids.extend(remaining_indices);
-        
-        for i in parent_ids {
-            keep_mask[i] = true;
-        }
+        let candidates: Vec<usize> = (0..current_pop_size)
+            .filter(|&i| !parent_ids.contains(&i))
+            .collect();
 
-        let mut write_index = 0;
+        let chosen = candidates.choose_multiple(&mut rng, parent_count).copied();
+        parent_ids.extend(chosen);
 
-        for read_index in 0..current_pop_size {
-            if keep_mask[read_index] {
-                if read_index != write_index {
-                    runner.population.swap(read_index, write_index);
-                    runner.fitness_vals.swap(read_index, write_index);
-                }
-                write_index+=1;
-            }
-        }
+        runner.elitist_ids = parent_ids;
 
-        runner.population.truncate(write_index);
-        runner.fitness_vals.truncate(write_index);
-
-        current_pop_size = runner.population.len();
-        let child_ids: Vec<usize> = (current_pop_size..current_pop_size * 2).collect();
+        let child_ids: Vec<usize> = (current_pop_size..current_pop_size + parent_count).collect();
         runner.child_ids = child_ids;
     }
 }

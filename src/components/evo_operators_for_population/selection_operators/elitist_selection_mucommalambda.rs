@@ -13,8 +13,6 @@ impl<T: Clone> PopulationGeneralSelection<T> for PopulationElitistSelectionMuCom
     }
 
     fn execute(&self, runner: &mut ProgramState<T>) {
-        let mut sorted_fitness_vals: Vec<f32> = runner.fitness_vals_sorted.clone();
-        sorted_fitness_vals.dedup();
         
         // Find the ids of the elitists from within the parents of the old generation
         let mut old_parents_sorted = runner.elitist_ids.clone();
@@ -25,7 +23,7 @@ impl<T: Clone> PopulationGeneralSelection<T> for PopulationElitistSelectionMuCom
         });
         
 
-        let mut new_parent_ids: Vec<usize> = Vec::with_capacity(runner.params.elitists);
+        let mut new_parent_ids: Vec<usize> = Vec::with_capacity(runner.params.elitists + runner.params.parent_elitists);
         new_parent_ids.extend(old_parents_sorted.iter().take(runner.params.parent_elitists));
 
         // Fill the rest with ids of the best performing _children_ of the last generation
@@ -34,12 +32,11 @@ impl<T: Clone> PopulationGeneralSelection<T> for PopulationElitistSelectionMuCom
             .collect();
 
         child_candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-        let needed = runner.params.elitists - new_parent_ids.len();
-        for (child_id, _) in child_candidates.iter().take(needed) {
+        for (child_id, _) in child_candidates.iter().take(runner.params.elitists) {
             new_parent_ids.push(*child_id);
         }
     
-        assert_eq!(runner.elitist_ids.len(), new_parent_ids.len());
+        assert_eq!(runner.params.elitists + runner.params.parent_elitists, new_parent_ids.len());
         runner.elitist_ids = new_parent_ids;
 
         let child_ids: Vec<usize> = (0..runner.params.elitists + runner.params.population_size).collect();
