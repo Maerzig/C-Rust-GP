@@ -7,3 +7,5 @@ pub mod pendigits;
 pub mod page_blocks;
 pub mod waveform;
 pub mod crossvalidation;
+pub mod apnea2;
+pub mod forestfires;

@@ -1,3 +1,4 @@
+use core::f32;
 use std::collections::HashMap;
 use nohash_hasher::BuildNoHashHasher;
 use rand::{Rng, thread_rng};
@@ -213,8 +214,20 @@ pub fn standardize_dataset(data: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
     transpose(standardized_data)
 }
 
+pub fn standardize_labels(labels: &Vec<f32>) -> Vec<f32> {
+    let len = labels.len() as f32;
+    let mean = labels.iter().sum::<f32>() / len;
+
+    // Variance using Bessels' correction
+    let var = labels.iter().map(|x| (*x - mean) * (*x - mean)).sum::<f32>() / (len - 1.0);
+    let std = var.sqrt();
+
+    labels.iter().map(|x| (*x - mean) / std).collect()
+}
+
 /// Inefficient but does the trick. Shuffle data and corresponding label.
-pub fn shuffle(v1: Vec<Vec<f32>>, v2: Vec<usize>) -> (Vec<Vec<f32>>, Vec<usize>) {
+/// Uses generics to handle labels of both usize and f32 type (i.e classification and regression datasets)
+pub fn shuffle<T: Clone>(v1: Vec<Vec<f32>>, v2: Vec<T>) -> (Vec<Vec<f32>>, Vec<T>) {
     assert!(v1.len() == v2.len());
 
     let len = v1.len();
@@ -223,10 +236,10 @@ pub fn shuffle(v1: Vec<Vec<f32>>, v2: Vec<usize>) -> (Vec<Vec<f32>>, Vec<usize>)
     len_range.shuffle(&mut thread_rng());
 
     let mut new1: Vec<Vec<f32>> = vec![];
-    let mut new2: Vec<usize> = vec![];
-    for idx in len_range {
-        new1.push(v1.get(idx).unwrap().clone());
-        new2.push(*v2.get(idx).unwrap());
+    let mut new2: Vec<T> = Vec::with_capacity(len);
+    for &idx in &len_range {
+        new1.push(v1[idx].clone());
+        new2.push(v2[idx].clone());
     }
 
     (new1, new2)
