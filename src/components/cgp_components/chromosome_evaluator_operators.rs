@@ -20,6 +20,16 @@ pub trait ChromosomeEvaluation<T> where T: Clone {
                 labels: &Vec<Vec<T>>,
                 function_set: Rc<Vec<Box<dyn Function<T>>>>,
     ) -> f32;
+
+    fn evaluate_mse(&self,
+                _chromosome: &mut Chromosome,
+                _active_node_func: Rc<Box<dyn ChromosomeActiveNode<T>>>,
+                _inputs: &Vec<Vec<T>>,
+                _labels: &Vec<Vec<T>>,
+                _function_set: Rc<Vec<Box<dyn Function<T>>>>,
+    ) -> f32 {
+        unimplemented!("MSE evaluation is only implemented for f32 regression")
+    }
 }
 
 
@@ -46,6 +56,22 @@ impl ChromosomeEvaluation<f32> for ChromosomeEvaluatorGeneral {
         
 
         fitness_metrics::fitness_regression(&outs, labels)
+    }
+
+    fn evaluate_mse(&self,
+                chromosome: &mut Chromosome,
+                active_node_func: Rc<Box<dyn ChromosomeActiveNode<f32>>>,
+                inputs: &Vec<Vec<f32>>,
+                labels: &Vec<Vec<f32>>,
+                function_set: Rc<Vec<Box<dyn Function<f32>>>>,
+    ) -> f32 {
+        let mut outputs = self.forward_pass(chromosome, active_node_func, inputs, Rc::clone(&function_set));
+
+        let output_start_id = chromosome.params.nbr_inputs + chromosome.params.graph_width;
+        let outs: Vec<Vec<f32>> = vec![outputs.remove(&output_start_id).unwrap()];
+        
+
+        fitness_metrics::fitness_regression_mse(&outs, labels)
     }
 }
 
