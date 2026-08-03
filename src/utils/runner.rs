@@ -25,6 +25,7 @@ pub struct ProgramState<T>
     pub elitist_ids: Vec<usize>,
     pub child_ids: Vec<usize>,
     pub tournament_selected: Option<Vec<usize>>,
+    pub total_evaluations: usize,
     // pub rng: ThreadRng,
 }
 
@@ -57,8 +58,8 @@ where
             population = Vec::with_capacity(params.population_size * 15); 
             fitness_vals = Vec::with_capacity(params.population_size * 15);
         } else {
-            population = Vec::with_capacity(params.elitists + params.population_size);
-            fitness_vals = Vec::with_capacity(params.elitists + params.population_size);
+            population = Vec::with_capacity(params.elitists + params.parent_elitists + params.population_size);
+            fitness_vals = Vec::with_capacity(params.elitists + params.parent_elitists + params.population_size);
         }
 
         for _ in 0..(params.elitists + params.population_size) {
@@ -114,6 +115,7 @@ where
 
 
         // let rng = rand::thread_rng();
+        let initial_evals = params.elitists + params.population_size;
 
         Self {
             params,
@@ -128,6 +130,7 @@ where
             child_ids,
             // rng,
             tournament_selected: None,
+            total_evaluations: initial_evals,
         }
     }
 

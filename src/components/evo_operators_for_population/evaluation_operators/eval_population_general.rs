@@ -28,6 +28,7 @@ where ChromosomeEvaluatorGeneral: ChromosomeEvaluation<T> {
                                                                Rc::clone(&function_set));
 
             runner.fitness_vals[*id] = fitness;
+            runner.total_evaluations += 1;
         }
 
         runner.sort_fitness_vals();
