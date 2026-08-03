@@ -2,17 +2,23 @@ use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::rc::Rc;
+use crate::components::cgp_components::chromosome::Chromosome;
 use crate::components::cgp_components::chromosome_find_active_node_operators::ChromosomeActiveNode;
 use crate::function_set::function_trait::Function;
 use crate::utils::runner::{get_best_parent_chromosome, ProgramState};
 use std::io::{BufWriter, Write};
 use crate::global_params::CgpParameters;
 use crate::utils::cli_functions::Cli;
+use serde_json::json;
 
 pub struct LoggerActiveNodes {
     file: BufWriter<File>,
 }
 pub struct LoggerFitness {
+    file: BufWriter<File>,
+}
+
+pub struct LoggerArchive {
     file: BufWriter<File>,
 }
 
@@ -104,5 +110,34 @@ impl LoggerFitness {
     }
 }
 
+impl LoggerArchive {
+    pub fn new(args: &Cli) -> Self {
+        let save_path = Path::new("")
+            .join(format!("Experiments_Output_{}", args.dataset_args.dataset_type))
+            .join(format!("cgp_extension_type_{}", args.cgp_extension_type))
+            .join(format!("dataset_{}", args.dataset_args.dataset))
+            .join(format!("mutation_type_{}", args.mutation_args.mutation_type))
+            .join(format!("selection_type_{}", args.selection_args.selection_type))
+            .join(format!("crossover_type_{}", args.crossover_args.crossover_type))
+            .join(format!("run_id_{}", args.run_id));
 
+        fs::create_dir_all(save_path.clone()).unwrap();
+        
+        let save_file_iteration = "archive.jsonl".to_string();
+        let file = BufWriter::new(File::create(save_path.join(save_file_iteration))
+            .expect("cannot create file"));
+
+        Self { file }
+    }
+
+pub fn write_best_individual(&mut self, iteration_number: usize, fitness: f32, chromosome: &Chromosome) {
+    let record = json!({
+        "iteration": iteration_number,
+        "fitness": fitness,
+        "chromosome": chromosome
+    });
+
+    writeln!(self.file, "{}", record).expect("cannot write to archive");
+}
+}
 
