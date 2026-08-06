@@ -6,6 +6,7 @@ pub enum MutationTypes {
     Point,
     Single,
     Split,
+    SplitAdaptive,
     Multi,
 }
 
@@ -15,6 +16,7 @@ impl Display for MutationTypes {
             MutationTypes::Point => write!(f, "Point Mutation"),
             MutationTypes::Single => write!(f, "Single Mutation"),
             MutationTypes::Split => write!(f, "Split Mutation"),
+            MutationTypes::SplitAdaptive => write!(f, "Split Mutation with adaptive mutation rate"),
             MutationTypes::Multi => write!(f, "Multi-n Mutation"),
         }
     }

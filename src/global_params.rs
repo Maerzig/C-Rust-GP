@@ -36,6 +36,9 @@ pub struct CgpParameters {
     pub split_mutation_rate_active: f32,
     pub split_mutation_rate_inactive: f32,
     pub mutation_rate: f32,
+    pub mutation_learning_rate: f32,
+    pub starting_mutation_rate: f32,
+    pub active_inactive_ratio: f32,
 
     // Crossover related parameters
     pub crossover_type: CrossoverType,

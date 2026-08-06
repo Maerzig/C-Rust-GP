@@ -22,6 +22,8 @@ pub struct ChromosomeMutationMultiN;
 
 pub struct ChromosomeMutationSplit;
 
+pub struct ChromosomeMutationSplitAdaptive;
+
 
 impl ChromosomeMutation for ChromosomeMutationSingle {
     fn new() -> Box<dyn ChromosomeMutation>
@@ -134,6 +136,26 @@ impl ChromosomeMutation for ChromosomeMutationSplit {
     }
 
     fn execute(&self, chromosome: &mut Chromosome, mutate_function: Rc<Box<dyn NodeMutationOperator>>) {
+        execute_split_mutation(chromosome, mutate_function, chromosome.params.split_mutation_rate_active, chromosome.params.split_mutation_rate_inactive);
+    }
+}
+
+// Split mutation with adaptive mutation rates for active nodes and a ratio between the active and inactive mutation rate
+// Needs an adaptation operator from mutation_rate_adaptation.rs to be run after cloning of parents/before mutation
+impl ChromosomeMutation for ChromosomeMutationSplitAdaptive {
+    fn new() -> Box<dyn ChromosomeMutation>
+    where 
+        Self: Sized,
+    {
+        Box::new(Self)
+    }
+
+    fn execute(&self, chromosome: &mut Chromosome, mutate_function: Rc<Box<dyn NodeMutationOperator>>) { 
+        execute_split_mutation(chromosome, mutate_function, chromosome.active_mutation_rate, (chromosome.active_mutation_rate * chromosome.params.active_inactive_ratio).clamp(0.0, 1.0));
+    }
+}
+
+fn execute_split_mutation(chromosome: &mut Chromosome, mutate_function: Rc<Box<dyn NodeMutationOperator>>, p_active: f32, p_inactive: f32) {
         let start_id = chromosome.params.nbr_inputs;
         let end_id = chromosome.params.nbr_inputs + chromosome.params.graph_width + chromosome.params.nbr_outputs;
 
@@ -146,10 +168,10 @@ impl ChromosomeMutation for ChromosomeMutationSplit {
             let mut mutate_flag = false;
             // Check if a node is active or not
             if chromosome.active_nodes.contains(&node_id) {
-                if rand_val <= chromosome.params.split_mutation_rate_active {
+                if rand_val <= p_active {
                     mutate_flag = true;
                 }
-            } else if rand_val <= chromosome.params.split_mutation_rate_inactive {
+            } else if rand_val <= p_inactive {
                 mutate_flag = true
             }
 
@@ -161,5 +183,4 @@ impl ChromosomeMutation for ChromosomeMutationSplit {
                 }
             }
         }
-    }
 }

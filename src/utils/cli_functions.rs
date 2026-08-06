@@ -78,6 +78,7 @@ pub struct MutationArgs {
         - Point,
         - Single,
         - Split,
+        - SplitAdaptive,
         - Multi,
         ")]
     pub mutation_type: String,
@@ -93,6 +94,15 @@ pub struct MutationArgs {
 
     #[arg(long, default_value_t = 0.0)]
     pub bioma_mutation_rate: f32,
+
+    #[arg(long, default_value_t = 0.05)]
+    pub mutation_learning_rate: f32,
+
+    #[arg(long, default_value_t = 0.05)]
+    pub starting_mutation_rate: f32,
+
+    #[arg(long, default_value_t = 5.0)]
+    pub active_inactive_ratio: f32,
 }
 
 
@@ -142,7 +152,7 @@ pub struct SelectionArgs {
     ")]
     pub elitism_number: usize,
 
-    #[arg(long, default_value_t = 3, help = "Relevant for MuCommaLambda and the elitist SAGA variants
+    #[arg(long, default_value_t = 3, help = "Relevant for ElitistMuCommaLambda and the elitist SAGA variants
     Decides how many of the parents of the old generations are carried over as elitists.
     ")]
     pub parent_elitists: usize,

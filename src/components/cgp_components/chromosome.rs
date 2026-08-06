@@ -17,6 +17,7 @@ pub struct Chromosome
     pub active_nodes: Vec<usize>,
     pub cgp_edges: Option<CGPEdges>, // only used for DAG
     pub age: isize, // only used for SAGA4 selection
+    pub active_mutation_rate: f32, // used for self-adaptive mutation of active nodes; inactive node mutation is tied to this rate
 }
 
 
@@ -25,6 +26,7 @@ impl Chromosome {
     pub fn new(params: CgpParameters) -> Self {
         let age: isize = 3;
         let mut nodes_grid: Vec<CGPNode> = vec![];
+        let active_mutation_rate: f32 = params.starting_mutation_rate;
         nodes_grid.reserve(params.nbr_inputs + params.graph_width + params.nbr_outputs);
 
         let mut cgp_edges: Option<CGPEdges>;
@@ -76,6 +78,7 @@ impl Chromosome {
             active_nodes: vec![],
             cgp_edges,
             age,
+            active_mutation_rate,
         }
     }
 }

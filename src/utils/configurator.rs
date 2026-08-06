@@ -3,7 +3,7 @@ use crate::components::cgp_components::cgp_node_mutation_operators::{NodeMutatio
 use crate::components::cgp_components::cgp_types::CGPType;
 use crate::components::cgp_components::chromosome_evaluator_operators::{ChromosomeEvaluatorGeneral, ChromosomeEvaluation};
 use crate::components::cgp_components::chromosome_find_active_node_operators::{ChromosomeActiveNode, ChromosomeFindActiveNodesDAG, ChromosomeFindActiveNodesGeneral};
-use crate::components::cgp_components::chromosome_mutation_operators::{ChromosomeMutationMultiN, ChromosomeMutationPoint, ChromosomeMutationSingle, ChromosomeMutationSplit, ChromosomeMutation};
+use crate::components::cgp_components::chromosome_mutation_operators::{ChromosomeMutation, ChromosomeMutationMultiN, ChromosomeMutationPoint, ChromosomeMutationSingle, ChromosomeMutationSplit, ChromosomeMutationSplitAdaptive};
 use crate::components::evo_operators_for_population::crossover_operators::crossover_algos::{Crossover, PopulationMultiPointCrossover, PopulationNoCrossover, PopulationSinglePointCrossover, PopulationUniformCrossover};
 use crate::components::evo_operators_for_population::crossover_operators::crossover_mulambda_elitist::PopulationCrossoverMuLambdaElitist;
 use crate::components::evo_operators_for_population::crossover_operators::crossover_tournament::PopulationCrossoverTournament;
@@ -61,6 +61,7 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         "Point" => MutationTypes::Point,
         "Single" => MutationTypes::Single,
         "Split" => MutationTypes::Split,
+        "SplitAdaptive" => MutationTypes::SplitAdaptive,
         "Multi" => MutationTypes::Multi,
         _ => { panic!("Unsupported mutation type") }
     };
@@ -98,6 +99,9 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         split_mutation_rate_active: args.mutation_args.bioma_mutation_prob_active,
         split_mutation_rate_inactive: args.mutation_args.bioma_mutation_prob_inactive,
         mutation_rate: args.mutation_args.bioma_mutation_rate,
+        mutation_learning_rate: args.mutation_args.mutation_learning_rate, // Learning rate for self-adaptation with Baeck formula
+        active_inactive_ratio: args.mutation_args.active_inactive_ratio, // Ratio between active active and inactive mutation rate in SplitAdaptive mutation (e.g. 0.05 active, ratio 5 -> 0.25 inactive)
+        starting_mutation_rate: args.mutation_args.starting_mutation_rate, //Initial mutation rate for active nodes in SplitAdaptive mutation
 
         // Crossover related parameters
         crossover_type,
@@ -143,6 +147,7 @@ pub fn get_chromosome_mutation_operator(params: &CgpParameters) -> Box<dyn Chrom
         MutationTypes::Single => ChromosomeMutationSingle::new(),
         MutationTypes::Split => ChromosomeMutationSplit::new(),
         MutationTypes::Multi => ChromosomeMutationMultiN::new(),
+        MutationTypes::SplitAdaptive => ChromosomeMutationSplitAdaptive::new(),
     }
 }
 
