@@ -1,16 +1,11 @@
-use crate::utils::runner::ProgramState;
 use rand_distr::{Normal, Distribution};
-
-pub trait MutationRateAdapation<T> where T: Clone {
-    fn new() -> Box<dyn MutationRateAdapation<T>> where Self: Sized;
-    fn execute(&mut self, runner: &mut ProgramState<T>);
-}
+use crate::{components::evo_operators_for_population::adaptation_operators::adaptation_trait::{self, GeneralAdaptation}, utils::runner::ProgramState};
 
 // Based on formula 3 in DOI 10.1007/3-540-61286-6_141
 pub struct ActiveRateAdaptationBaeck;
 
-impl<T: Clone> MutationRateAdapation<T> for ActiveRateAdaptationBaeck {
-    fn new() -> Box<dyn MutationRateAdapation<T>> where Self: Sized {
+impl<T: Clone> GeneralAdaptation<T> for ActiveRateAdaptationBaeck {
+    fn new() -> Box<dyn GeneralAdaptation<T>> where Self: Sized {
         Box::new(Self)
     }
     fn execute(&mut self, runner: &mut ProgramState<T>) {

@@ -44,6 +44,10 @@ pub struct Cli {
 
     #[command(flatten)]
     pub selection_args: SelectionArgs,
+
+    #[command(flatten)]
+    pub adaptation_args: AdaptationArgs,
+
 }
 
 #[derive(Args)]
@@ -94,9 +98,6 @@ pub struct MutationArgs {
 
     #[arg(long, default_value_t = 0.0)]
     pub bioma_mutation_rate: f32,
-
-    #[arg(long, default_value_t = 0.05)]
-    pub mutation_learning_rate: f32,
 
     #[arg(long, default_value_t = 0.05)]
     pub starting_mutation_rate: f32,
@@ -164,6 +165,16 @@ pub struct SelectionArgs {
     pub population_size: usize,
 
 }
+#[derive(Args)]
+#[group(required = false)]
+pub struct AdaptationArgs {
+    #[arg(long, default_value = "Baeck", help = "Default options include:
+        - Baeck")]
+    pub adaptation_type: String,
+    #[arg(long, default_value_t = 0.05, help = "Learning rate for the adaptation of the active mutation rate")]
+    pub learning_rate: f32,
+}
+
 
 pub fn get_arguments() -> Cli {
     

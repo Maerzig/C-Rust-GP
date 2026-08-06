@@ -3,4 +3,4 @@ pub mod general_operators;
 pub mod evaluation_operators;
 pub mod crossover_operators;
 pub mod mutation_operators;
-pub mod mutation_rate_adaptation;
+pub mod adaptation_operators;
