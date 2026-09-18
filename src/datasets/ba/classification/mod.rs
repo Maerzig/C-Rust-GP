@@ -1,0 +1,11 @@
+pub mod adult;
+pub mod bach;
+pub mod breast_cancer;
+pub mod car;
+pub mod chronic_kidney_disease;
+pub mod forest;
+pub mod human;
+pub mod iris;
+pub mod monk2;
+pub mod wall24;
+pub mod wine_quality;

@@ -1,0 +1,16 @@
+pub mod abalone;
+pub mod apnea2;
+pub mod bike_sharing_day;
+pub mod bike_sharing_hour;
+pub mod bodyfat;
+pub mod cal_housing;
+pub mod diabetes;
+pub mod energydata;
+pub mod forestfires;
+pub mod keijzer;
+pub mod koza_3;
+pub mod nguyen_7;
+pub mod pagie_1;
+pub mod pollution;
+pub mod winequality_red;
+pub mod winequality_white;
