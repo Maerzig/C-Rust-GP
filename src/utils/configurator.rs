@@ -19,6 +19,7 @@ use crate::components::evo_operators_for_population::restart_operators::phenotyp
 use crate::components::evo_operators_for_population::restart_operators::restart_trait::GeneralRestart;
 use crate::components::evo_operators_for_population::restart_operators::restart_types::RestartTypes;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_mucommalambda::PopulationElitistSelectionMuCommaLambda;
+use crate::components::evo_operators_for_population::selection_operators::selection_mucommalambda::PopulationSelectionMuCommaLambda;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_mupluslambda::PopulationElitistSelectionMuPlusLambda;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_oneplusfour::PopulationElitistSelectionOnePlusFour;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_saga4_survivor_tournament::PopulationSelectionSAGA4SurvivorTournament;
@@ -54,6 +55,7 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         "OnePlusFour" => SelectionTypes::OnePlusFour,
         "MuPlusLambda" => SelectionTypes::MuPlusLambda,
         "MuCommaLambda" => SelectionTypes::MuCommaLambda,
+        "ElitistMuCommaLambda" => SelectionTypes::ElitistMuCommaLambda,
         "Tournament" => SelectionTypes::Tournament,
         "SAGA4Random" => SelectionTypes::SAGA4Random,
         "SAGA4ParentTournament" => SelectionTypes::SAGA4ParentTournament,
@@ -146,6 +148,9 @@ fn check_selection_args_validity(args: &Cli) {
             assert_eq!(1, args.selection_args.elitism_number, "For (1+4)-ES, elitism-number must be 1");
             assert_eq!(4, args.selection_args.population_size, "For (1+4)-ES, population-size must be 4");
         },
+        "MuCommaLambda" => {
+            assert!(args.selection_args.population_size >= args.selection_args.elitism_number, "For (mu,lambda)-ES, population size (lambda) must be >= elitism_number (mu)");
+        },
         "SAGA4SurvivorTournament" | "SAGA4ParentTournament" => {
             assert_ne!(0, args.selection_args.tournament_size, "Tournament size cannot be 0 for tournament based selection methods");
         }
@@ -205,7 +210,8 @@ pub fn get_population_selection_operator<T: Clone>(params: &CgpParameters) -> Bo
     match params.selection_type {
         SelectionTypes::OnePlusFour => PopulationElitistSelectionOnePlusFour::new(),
         SelectionTypes::MuPlusLambda => PopulationElitistSelectionMuPlusLambda::new(),
-        SelectionTypes::MuCommaLambda => PopulationElitistSelectionMuCommaLambda::new(),
+        SelectionTypes::MuCommaLambda => PopulationSelectionMuCommaLambda::new(),
+        SelectionTypes::ElitistMuCommaLambda => PopulationElitistSelectionMuCommaLambda::new(),
         SelectionTypes::Tournament => PopulationElitistSelectionWithTournament::new(),
         SelectionTypes::SAGA4Random => PopulationSelectionSAGA4Random::new(),
         SelectionTypes::SAGA4ParentTournament => PopulationSelectionSAGA4ParentTournament::new(),
@@ -221,6 +227,7 @@ pub fn get_population_crossover_operator<T: Clone>(params: &CgpParameters) -> (B
         SelectionTypes::OnePlusFour => panic!("Wrong Selection type for crossover"),
         SelectionTypes::MuPlusLambda => PopulationCrossoverMuLambdaElitist::new(),
         SelectionTypes::MuCommaLambda => PopulationCrossoverMuLambdaElitist::new(),
+        SelectionTypes::ElitistMuCommaLambda => PopulationCrossoverMuLambdaElitist::new(),
         SelectionTypes::Tournament => PopulationCrossoverTournament::new(),
         SelectionTypes::SAGA4Random => panic!("Wrong Selection type for crossover"),
         SelectionTypes::SAGA4ParentTournament => panic!("Wrong Selection type for crossover"),
