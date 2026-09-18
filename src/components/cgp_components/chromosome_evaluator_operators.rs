@@ -1,13 +1,14 @@
 //! Handles the evaluation of a chromosome given inputs and respective outputs.
 
 use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hasher};
 use std::rc::Rc;
 use nohash_hasher::BuildNoHashHasher;
 use crate::components::cgp_components::cgp_node::CGPNode;
 use crate::components::cgp_components::chromosome::Chromosome;
 use crate::components::cgp_components::cgp_node_types::NodeType;
 use crate::utils::fitness_metrics;
-use crate::utils::utility_funcs::transpose;
+use crate::utils::utility_funcs::{quantize_f32_for_hash, transpose};
 use crate::components::cgp_components::chromosome_find_active_node_operators::ChromosomeActiveNode;
 use crate::function_set::function_trait::Function;
 
@@ -28,7 +29,7 @@ pub trait ChromosomeEvaluation<T> where T: Clone {
                 _labels: &Vec<Vec<T>>,
                 _function_set: Rc<Vec<Box<dyn Function<T>>>>,
     ) -> f32 {
-        unimplemented!("MSE evaluation is only implemented for f32 regression")
+        f32::MAX
     }
 }
 
@@ -52,9 +53,20 @@ impl ChromosomeEvaluation<f32> for ChromosomeEvaluatorGeneral {
         let mut outputs = self.forward_pass(chromosome, active_node_func, inputs, Rc::clone(&function_set));
 
         let output_start_id = chromosome.params.nbr_inputs + chromosome.params.graph_width;
-        let outs: Vec<Vec<f32>> = vec![outputs.remove(&output_start_id).unwrap()];
-        
+        let output_end_id = output_start_id + chromosome.params.nbr_outputs;
 
+        let mut hasher = DefaultHasher::new();
+
+        for out_id in output_start_id..output_end_id {
+            if let Some(out_vals) = outputs.get(&out_id) {
+                for &val in out_vals {
+                    hasher.write_u32(quantize_f32_for_hash(val));
+                }
+            }
+        }
+        chromosome.phenotype_hash = hasher.finish();
+
+        let outs: Vec<Vec<f32>> = vec![outputs.remove(&output_start_id).unwrap()];
         fitness_metrics::fitness_regression(&outs, labels)
     }
 
@@ -68,6 +80,19 @@ impl ChromosomeEvaluation<f32> for ChromosomeEvaluatorGeneral {
         let mut outputs = self.forward_pass(chromosome, active_node_func, inputs, Rc::clone(&function_set));
 
         let output_start_id = chromosome.params.nbr_inputs + chromosome.params.graph_width;
+        let output_end_id = output_start_id + chromosome.params.nbr_outputs;
+
+        let mut hasher = DefaultHasher::new();
+
+        for out_id in output_start_id..output_end_id {
+            if let Some(out_vals) = outputs.get(&out_id) {
+                for &val in out_vals {
+                    hasher.write_u32(quantize_f32_for_hash(val));
+                }
+            }
+        }
+        chromosome.phenotype_hash = hasher.finish();
+
         let outs: Vec<Vec<f32>> = vec![outputs.remove(&output_start_id).unwrap()];
         
 
@@ -90,6 +115,16 @@ impl ChromosomeEvaluation<bool> for ChromosomeEvaluatorGeneral {
 
         let output_start_id = chromosome.params.nbr_inputs + chromosome.params.graph_width;
         let output_end_id = chromosome.params.nbr_inputs + chromosome.params.graph_width + chromosome.params.nbr_outputs;
+
+        let mut hasher = DefaultHasher::new();
+        for out_id in output_start_id..output_end_id {
+            if let Some(out_vals) = outputs.get(&out_id) {
+                for &val in out_vals {
+                    hasher.write_u8(val as u8);
+                }
+            }
+        }
+        chromosome.phenotype_hash = hasher.finish();
 
         let mut outs: Vec<Vec<bool>> = Vec::with_capacity(output_end_id - output_start_id);
         for i in output_start_id..output_end_id {

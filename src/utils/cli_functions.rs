@@ -48,6 +48,8 @@ pub struct Cli {
     #[command(flatten)]
     pub adaptation_args: AdaptationArgs,
 
+    #[command(flatten)]
+    pub restart_args: RestartArgs,
 }
 
 #[derive(Args)]
@@ -178,6 +180,25 @@ pub struct AdaptationArgs {
     pub learning_rate: f32,
 }
 
+#[derive(Args)]
+#[group(required = false)]
+pub struct RestartArgs {
+    #[arg(long, default_value = "Phenotype", help = "Default options include:
+        - None,
+        - Phenotype")]
+    pub restart_type: String,
+    #[arg(long, default_value_t = 3, help = "How many elitists get saved to the archive after a restart")]
+    pub archive_elitists: usize,
+    // Decide a good default value here
+    #[arg(long, default_value_t = 0.1, help = "Minimum threshold of phenotype diversity (see DOI 10.1109/SSCI.2015.201) before a restart is triggered")]
+    pub diversity_threshold: f32,
+    #[arg(long, default_value_t = false, help = "Whether to keep best individuals in the population after a reset (true) or just save them to the archive (false)")]
+    pub keep_elitists: bool,
+    #[arg(long, default_value_t = 1.0, help = "Amplifier for the frequency rate in the calculation of healthy phenotype diversity (see DOI 10.1109/SSCI.2015.201 for more information)")]
+    pub phenotype_diversity_amplifier: f32,
+    #[arg(long, default_value_t = 2.0, help = "Percentage of evaluation budget without improvement before triggering a restart check")]
+    pub max_stagnant_evals_pct: f32,
+}
 
 pub fn get_arguments() -> Cli {
     

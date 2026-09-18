@@ -151,7 +151,7 @@ impl ChromosomeMutation for ChromosomeMutationSplitAdaptive {
     }
 
     fn execute(&self, chromosome: &mut Chromosome, mutate_function: Rc<Box<dyn NodeMutationOperator>>) { 
-        execute_split_mutation(chromosome, mutate_function, chromosome.active_mutation_rate, (chromosome.active_mutation_rate * chromosome.params.active_inactive_ratio).clamp(0.0, 1.0));
+        execute_split_mutation(chromosome, mutate_function, chromosome.active_mutation_rate, chromosome.inactive_mutation_rate);
     }
 }
 

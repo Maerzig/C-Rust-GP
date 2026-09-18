@@ -9,7 +9,7 @@ use crate::components::cgp_components::cgp_node_types::NodeType;
 use crate::utils::cycle_checker::CGPEdges;
 
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct CGPNode {
     pub position: usize,
     pub node_type: NodeType,

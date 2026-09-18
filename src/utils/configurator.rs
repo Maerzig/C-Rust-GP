@@ -15,6 +15,9 @@ use crate::components::evo_operators_for_population::evaluation_operators::eval_
 use crate::components::evo_operators_for_population::evaluation_operators::eval_population_oneplusfour::{PopulationForwardPassOnePlusFour};
 use crate::components::evo_operators_for_population::evaluation_operators::eval_population_trait::{PopulationGeneralForwardPass};
 use crate::components::evo_operators_for_population::mutation_operators::mutation_types::MutationTypes;
+use crate::components::evo_operators_for_population::restart_operators::phenotype_restart::{PhenotypicDiversityRestart, NoRestart};
+use crate::components::evo_operators_for_population::restart_operators::restart_trait::GeneralRestart;
+use crate::components::evo_operators_for_population::restart_operators::restart_types::RestartTypes;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_mucommalambda::PopulationElitistSelectionMuCommaLambda;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_mupluslambda::PopulationElitistSelectionMuPlusLambda;
 use crate::components::evo_operators_for_population::selection_operators::elitist_selection_oneplusfour::PopulationElitistSelectionOnePlusFour;
@@ -86,6 +89,12 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         _ => { panic!("Unsupported adaptation type") }
     };
     
+    let restart_type = match args.restart_args.restart_type.as_str() {
+        "None" => RestartTypes::None,
+        "Phenotype" => RestartTypes::PhenotypicDiversityRestart,
+        _ => { panic!("unsupported restart type") }
+    };
+
 
     CgpParameters {
         // General CGP related parameters
@@ -121,6 +130,13 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         adaptation_type,
         learning_rate: args.adaptation_args.learning_rate, // Learning rate for self-adaptation with Baeck formula
 
+        // Reset related parameters
+        restart_type,
+        archive_elitists: args.restart_args.archive_elitists,
+        diversity_threshold: args.restart_args.diversity_threshold,
+        keep_elitists: args.restart_args.keep_elitists,
+        phenotype_diversity_amplifier: args.restart_args.phenotype_diversity_amplifier,
+        max_stagnant_evals_pct: args.restart_args.max_stagnant_evals_pct,
     }
 }
 
@@ -231,3 +247,12 @@ pub fn get_adaptation_operator<T: Clone>(params: &CgpParameters) -> Box<dyn Gene
         AdaptationTypes::BaeckBothAdaptive => BaeckBothAdaptive::new(),
     }
 }
+
+pub fn get_restart_operator<T: Clone>(params: &CgpParameters) -> Box<dyn GeneralRestart<T>>
+{
+    match params.restart_type {
+        RestartTypes::None => NoRestart::new(),
+        RestartTypes::PhenotypicDiversityRestart => PhenotypicDiversityRestart::new(),
+    }
+}
+// Add this for adaptation and restart

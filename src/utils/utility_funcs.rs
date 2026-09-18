@@ -105,3 +105,22 @@ pub fn get_median_from_sorted(numbers: &Vec<f32>) -> Option<f32> {
         Some(numbers[mid])
     }
 }
+
+pub fn quantize_f32_for_hash(val: f32) -> u32 {
+    // All NaN values share a bit pattern
+    if val.is_nan() {
+        return u32::MAX;
+    }
+    // Normalise -0.0 to +0.0 to avoid having 2 different bit patterns
+    let normalised: f32;
+    if val == 0.0 {
+        normalised = 0.0;
+    } else {
+        normalised = val;
+    }
+
+    let bits = normalised.to_bits();
+
+    // Mask bottom 4 bits of mantissa so similar values get binned together
+    bits & 0xFFFFFFF0
+}

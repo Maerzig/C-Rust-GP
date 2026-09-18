@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 use crate::components::evo_operators_for_population::selection_operators::selection_types::SelectionTypes;
@@ -7,6 +8,7 @@ use crate::components::cgp_components::chromosome::Chromosome;
 use crate::components::cgp_components::chromosome_evaluator_operators::ChromosomeEvaluation;
 use crate::components::cgp_components::chromosome_find_active_node_operators::ChromosomeActiveNode;
 use crate::function_set::function_trait::Function;
+use crate::utils::elitist_archive::ElitistArchive;
 use crate::utils::utility_funcs::{get_argmin, get_argmins_of_value, transpose, vect_difference};
 
 
@@ -26,6 +28,8 @@ pub struct ProgramState<T>
     pub child_ids: Vec<usize>,
     pub tournament_selected: Option<Vec<usize>>,
     pub total_evaluations: usize,
+    pub elitist_archive: ElitistArchive, // Used to keep elitists archived after restarts
+    pub diversity: f32, // Tracks population diversity; mostly used for logging purposes
     // pub rng: ThreadRng,
 }
 
@@ -43,6 +47,7 @@ where
                evaluator: Rc<Box<dyn ChromosomeEvaluation<T>>>,
                active_node_func: Rc<Box<dyn ChromosomeActiveNode<T>>>,
     ) -> Self {
+        let elitist_archive = ElitistArchive::new(params.archive_elitists);
         // Data "must" be transposed for later evaluation cycles.
         // Doesn't really need to be, but otherwise the logic is more confusing later.
         let data = transpose(data);
@@ -116,6 +121,7 @@ where
 
         // let rng = rand::thread_rng();
         let initial_evals = params.elitists + params.population_size;
+        let diversity = 0.0;
 
         Self {
             params,
@@ -131,6 +137,8 @@ where
             // rng,
             tournament_selected: None,
             total_evaluations: initial_evals,
+            elitist_archive,
+            diversity,
         }
     }
 
@@ -139,11 +147,116 @@ where
         self.fitness_vals_sorted[0]
     }
 
+    pub fn get_worst_fitness(&self) -> f32 {
+        return *self.fitness_vals_sorted.last().unwrap_or(&f32::MAX);
+    }
 
     pub fn sort_fitness_vals(&mut self) {
         let mut fitness_vals_sorted = self.fitness_vals.clone();
         fitness_vals_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
         self.fitness_vals_sorted = fitness_vals_sorted;
+    }
+
+    // Used for restarting mechanisms
+    pub fn reinitialize_population(&mut self, 
+        function_set: Rc<Vec<Box<dyn Function<T>>>>, 
+        evaluator: Rc<Box<dyn ChromosomeEvaluation<T>>>,
+        active_node_func: Rc<Box<dyn ChromosomeActiveNode<T>>>) 
+        {            
+        
+        let mut population: Vec<Chromosome>;
+        let mut fitness_vals: Vec<f32>;
+        let is_saga = self.params.selection_type == SelectionTypes::SAGA4Random || self.params.selection_type == SelectionTypes::SAGA4Full || self.params.selection_type == SelectionTypes::SAGA4ParentTournament || self.params.selection_type == SelectionTypes::SAGA4SurvivorTournament;
+        if is_saga {
+            // Allocate space for the maximum possible amount of individuals ahead of time; I believe this is more efficient than reallocating every time the population grows
+            population = Vec::with_capacity(self.params.population_size * 15); 
+            fitness_vals = Vec::with_capacity(self.params.population_size * 15);
+        } else {
+            population = Vec::with_capacity(self.params.elitists + self.params.parent_elitists + self.params.population_size);
+            fitness_vals = Vec::with_capacity(self.params.elitists + self.params.parent_elitists + self.params.population_size);
+        }
+
+        let mut free_slots: usize = self.params.elitists + self.params.population_size;
+
+        // Introduce at most params.elitists individuals from the archive into the new population to make sure the new population actually finds new genetic material
+        if self.params.keep_elitists {
+            let archived_elitists = min(self.params.elitists, self.elitist_archive.len());
+            free_slots -= archived_elitists;
+
+            for id in 0..archived_elitists {
+                population.push(self.elitist_archive.elitists[id].0.clone());
+                fitness_vals.push(self.elitist_archive.elitists[id].1);
+            }
+        }
+
+        // Fill up remaining slots (all slots if keep_elitists == false) with new chromosomes
+        for _ in 0..(free_slots) {
+            let mut chromosome = Chromosome::new(
+                self.params.clone(),
+            );
+            let fitness = evaluator.evaluate(&mut chromosome,
+                                             Rc::clone(&active_node_func),
+                                             &self.data,
+                                             &self.label,
+                                             Rc::clone(&function_set));
+            fitness_vals.push(fitness);
+            population.push(chromosome);
+        }
+
+        // Get sorted fitness vals
+        let mut fitness_vals_sorted = fitness_vals.clone();
+        fitness_vals_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        let mut elitist_ids: Vec<usize> = vec![];
+        let mut child_ids: Vec<usize> = (0..(self.params.elitists + self.params.population_size)).collect();
+
+        if self.params.elitists == 1 {
+            // if there is only one parent / elitist, its search can be simplified
+            let parent_id = get_argmin(&fitness_vals);
+            elitist_ids = Vec::from([parent_id]);
+            // this code is only valid during initialization: child_ids are a sorted list from
+            // [0, 1, 2, ..., elitists + pop-size]. Thus, the index of the elitist ID in child-ids
+            // is its actual ID.
+            // swap_remove is O(1); child_ids needn't be sorted i guess
+            child_ids.swap_remove(parent_id);
+        } else {
+            // case for more elitists. it works for one elitist, too. However, the computational
+            // overhead is higher compared to the upper if-case
+            // To get elitist IDS:
+            // Reverse fitness_vals_sorted to pop the best fitness first
+            let mut temp_fitness_vals_sorted: Vec<f32> = fitness_vals_sorted.clone();
+            temp_fitness_vals_sorted.reverse();
+            temp_fitness_vals_sorted.dedup();
+
+            while elitist_ids.len() < self.params.elitists {
+                let current_best_fitness_val = temp_fitness_vals_sorted.pop().unwrap();
+
+                let mut elitist_candidates = get_argmins_of_value(&fitness_vals, current_best_fitness_val);
+                elitist_ids.append(&mut elitist_candidates);
+            }
+
+            // throw away possible excessive indivudals
+            elitist_ids.truncate(self.params.elitists);
+            // find the new child IDs
+            child_ids = vect_difference(&child_ids, &elitist_ids);
+        }
+
+        self.population = population;
+        self.fitness_vals = fitness_vals;
+        self.fitness_vals_sorted = fitness_vals_sorted;
+        self.elitist_ids = elitist_ids;
+        self.child_ids = child_ids;
+        self.tournament_selected = None;
+        self.total_evaluations += free_slots;
+    }
+
+    // Update the elitist archive for the current generation if current elitists have better/equal fitness to already archived individuals
+    pub fn update_elitist_archive(&mut self) {
+        for &id in &self.elitist_ids {
+            let candidate = &self.population[id];
+            let fitness = self.fitness_vals[id];
+            self.elitist_archive.try_archive(candidate, fitness);
+        }
     }
 }
 
@@ -153,7 +266,4 @@ pub fn get_best_parent_chromosome<T>(runner: &ProgramState<T>) -> Chromosome {
 
     runner.population[idx].clone()
 }
-
-
-
 

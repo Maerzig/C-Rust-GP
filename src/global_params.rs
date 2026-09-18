@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::components::cgp_components::cgp_types::CGPType;
 use crate::components::evo_operators_for_population::crossover_operators::crossover_types::CrossoverType;
 use crate::components::evo_operators_for_population::mutation_operators::mutation_types::MutationTypes;
+use crate::components::evo_operators_for_population::restart_operators::restart_types::RestartTypes;
 use crate::components::evo_operators_for_population::selection_operators::selection_types::SelectionTypes;
 use crate::components::evo_operators_for_population::adaptation_operators::adaptation_types::AdaptationTypes;
 
@@ -49,6 +50,13 @@ pub struct CgpParameters {
     pub adaptation_type: AdaptationTypes,
     pub learning_rate: f32,
 
+    // Restart related parameters
+    pub restart_type: RestartTypes,
+    pub archive_elitists: usize,
+    pub diversity_threshold: f32,
+    pub keep_elitists: bool,
+    pub phenotype_diversity_amplifier: f32,
+    pub max_stagnant_evals_pct: f32,
 }
 
 
@@ -78,6 +86,12 @@ impl Display for CgpParameters {
         writeln!(f, "\"adaptation_type\": \"{}\"", self.adaptation_type)?;
         writeln!(f, "\"learning_rate\": \"{}\",", self.learning_rate)?;
 
+        writeln!(f, "\"restart_type\": \"{}\"", self.restart_type)?;
+        writeln!(f, "\"archive_elitists\": \"{}\"", self.archive_elitists)?;
+        writeln!(f, "\"diversity_threshold\": \"{}\"", self.diversity_threshold)?;
+        writeln!(f, "\"keep_elitists\": \"{}\"", self.keep_elitists)?;
+        writeln!(f, "\"phenotype_diversity_amplifier\": \"{}\"", self.phenotype_diversity_amplifier)?;
+        writeln!(f, "\"max_stagnant_evals_pct\": \"{}\"", self.max_stagnant_evals_pct)?;
 
         writeln!(f, "}}")
     }
