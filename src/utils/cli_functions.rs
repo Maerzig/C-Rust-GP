@@ -16,7 +16,7 @@ pub struct Cli {
         ")]
     pub cgp_extension_type: String,
 
-    #[arg(long, default_value_t = 50)]
+    #[arg(long, default_value_t = 100)]
     pub nbr_nodes: usize,
 
     #[arg(
@@ -25,6 +25,27 @@ pub struct Cli {
         help = "Helper value to differentiate multiple runs of the same configuration."
     )]
     pub run_id: usize,
+ 
+    #[arg(
+        long,
+        default_value_t = 5,
+        help = "Amount of folds used in cross validation"
+    )]
+    pub folds: usize,
+
+    #[arg(
+        long,
+        default_value_t = 6,
+        help = "Amount of random seeds used per fold in cross validation"
+    )]
+    pub seeds: usize,
+
+    #[arg(
+        long,
+        default_value_t = 10000000,
+        help = "Maximum number of evaluations allowed for every seed"
+    )]
+    pub eval_budget: usize,
 
     // #[arg(
     //     long,
