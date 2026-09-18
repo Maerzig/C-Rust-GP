@@ -99,7 +99,7 @@ pub struct MutationArgs {
     #[arg(long, default_value_t = 0.0)]
     pub bioma_mutation_rate: f32,
 
-    #[arg(long, default_value_t = 0.05)]
+    #[arg(long, default_value_t = 0.025)]
     pub starting_mutation_rate: f32,
 
     #[arg(long, default_value_t = 5.0)]
@@ -168,10 +168,13 @@ pub struct SelectionArgs {
 #[derive(Args)]
 #[group(required = false)]
 pub struct AdaptationArgs {
-    #[arg(long, default_value = "Baeck", help = "Default options include:
-        - Baeck")]
+    #[arg(long, default_value = "BaeckCoupled", help = "Default options include:
+        - None,
+        - BaeckCoupled,
+        - BaeckStaticInactive,
+        - BaeckBothAdaptive")]
     pub adaptation_type: String,
-    #[arg(long, default_value_t = 0.05, help = "Learning rate for the adaptation of the active mutation rate")]
+    #[arg(long, default_value_t = 0.05, help = "Learning rate for self-adaptation with Baeck formula")]
     pub learning_rate: f32,
 }
 

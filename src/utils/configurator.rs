@@ -5,7 +5,7 @@ use crate::components::cgp_components::chromosome_evaluator_operators::{Chromoso
 use crate::components::cgp_components::chromosome_find_active_node_operators::{ChromosomeActiveNode, ChromosomeFindActiveNodesDAG, ChromosomeFindActiveNodesGeneral};
 use crate::components::cgp_components::chromosome_mutation_operators::{ChromosomeMutation, ChromosomeMutationMultiN, ChromosomeMutationPoint, ChromosomeMutationSingle, ChromosomeMutationSplit, ChromosomeMutationSplitAdaptive};
 use crate::components::evo_operators_for_population::adaptation_operators::adaptation_trait::GeneralAdaptation;
-use crate::components::evo_operators_for_population::adaptation_operators::mutation_rate_adaptation::ActiveRateAdaptationBaeck;
+use crate::components::evo_operators_for_population::adaptation_operators::mutation_rate_adaptation::{BaeckCoupled, BaeckStaticInactive, BaeckBothAdaptive, NoAdaptation};
 use crate::components::evo_operators_for_population::crossover_operators::crossover_algos::{Crossover, PopulationMultiPointCrossover, PopulationNoCrossover, PopulationSinglePointCrossover, PopulationUniformCrossover};
 use crate::components::evo_operators_for_population::crossover_operators::crossover_mulambda_elitist::PopulationCrossoverMuLambdaElitist;
 use crate::components::evo_operators_for_population::crossover_operators::crossover_tournament::PopulationCrossoverTournament;
@@ -59,6 +59,7 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         _ => { panic!("Unsupported selection type") }
     };
     check_selection_args_validity(args);
+    check_adaptation_args_validity(args);
 
     let mutation_type = match args.mutation_args.mutation_type.as_str() {
         "Point" => MutationTypes::Point,
@@ -78,7 +79,10 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
     };
 
     let adaptation_type = match args.adaptation_args.adaptation_type.as_str() {
-        "Baeck" => AdaptationTypes::ActiveRateAdaptationBaeck,
+        "None" => AdaptationTypes::None,
+        "BaeckCoupled" => AdaptationTypes::BaeckCoupled,
+        "BaeckStaticInactive" => AdaptationTypes::BaeckStaticInactive,
+        "BaeckBothAdaptive" => AdaptationTypes::BaeckBothAdaptive,
         _ => { panic!("Unsupported adaptation type") }
     };
     
@@ -132,6 +136,16 @@ fn check_selection_args_validity(args: &Cli) {
         _ => {}
     };
     
+}
+
+fn check_adaptation_args_validity(args: &Cli) {
+    if args.adaptation_args.adaptation_type != "None" {
+        assert_eq!(
+            args.mutation_args.mutation_type, "SplitAdaptive",
+            "Baeck adaptation operators ({}) require '--mutation-type SplitAdaptive'",
+            args.adaptation_args.adaptation_type
+        );
+    }
 }
 
 
@@ -208,9 +222,12 @@ pub fn get_population_crossover_operator<T: Clone>(params: &CgpParameters) -> (B
     (crossover_population_mechanism, Rc::new(crossover_operator))
 }
 
-pub fn get_adaptation_operator<T: Clone>(params: &CgpParameters) -> (Box<dyn GeneralAdaptation<T>>)
+pub fn get_adaptation_operator<T: Clone>(params: &CgpParameters) -> Box<dyn GeneralAdaptation<T>>
 {
     match params.adaptation_type {
-        AdaptationTypes::ActiveRateAdaptationBaeck => ActiveRateAdaptationBaeck::new(),
+        AdaptationTypes::None => NoAdaptation::new(),
+        AdaptationTypes::BaeckCoupled => BaeckCoupled::new(),
+        AdaptationTypes::BaeckStaticInactive => BaeckStaticInactive::new(),
+        AdaptationTypes::BaeckBothAdaptive => BaeckBothAdaptive::new(),
     }
 }
