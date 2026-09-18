@@ -191,3 +191,192 @@ impl ChromosomeEvaluatorGeneral {
         outputs
     }
 }
+
+
+#[derive(Clone)]
+pub struct ChromosomeEvaluatorClassification;
+
+impl ChromosomeEvaluation<f32> for ChromosomeEvaluatorClassification {
+    fn new() -> Box<dyn ChromosomeEvaluation<f32>> {
+        Box::new(Self)
+    }
+
+    fn evaluate(
+        &self,
+        chromosome: &mut Chromosome,
+        active_node_func: Rc<Box<dyn ChromosomeActiveNode<f32>>>,
+        inputs: &Vec<Vec<f32>>,
+        labels: &Vec<Vec<f32>>,
+        function_set: Rc<Vec<Box<dyn Function<f32>>>>,
+    ) -> f32 {
+        let mut outputs = self.forward_pass(chromosome, active_node_func, inputs, Rc::clone(&function_set));
+
+        let output_start_id = chromosome.params.nbr_inputs + chromosome.params.graph_width;
+        let output_end_id = output_start_id + chromosome.params.nbr_outputs;
+
+        let mut outs: Vec<Vec<f32>> = Vec::with_capacity(chromosome.params.nbr_outputs);
+        for out_id in output_start_id..output_end_id {
+            outs.push(outputs.remove(&out_id).unwrap());
+        }
+
+        if outs.is_empty() || outs[0].is_empty() {
+            chromosome.phenotype_hash = 0;
+            return 2.0;
+        }
+
+        for row in &outs {
+            for &val in row {
+                if val.is_nan() || val.is_infinite() {
+                    chromosome.phenotype_hash = 0;
+                    return 2.0;
+                }
+            }
+        }
+
+        let nbr_samples = outs[0].len();
+        let is_single_output = outs.len() == 1;
+        let nbr_classes = if is_single_output { 2 } else { outs.len() };
+        let mut hasher = DefaultHasher::new();
+
+        for sample_idx in 0..nbr_samples {
+            let pred_class = if is_single_output {
+                if outs[0][sample_idx] > 0.0 { 1 } else { 0 }
+            } else {
+                let mut pred_c = 0;
+                let mut max_val = outs[0][sample_idx];
+                for class_idx in 1..nbr_classes {
+                    let v = outs[class_idx][sample_idx];
+                    if v > max_val {
+                        max_val = v;
+                        pred_c = class_idx;
+                    }
+                }
+                pred_c
+            };
+            hasher.write_usize(pred_class);
+        }
+        chromosome.phenotype_hash = hasher.finish();
+
+        let (fitness, mae) = fitness_metrics::fitness_classification_mcc(&outs, labels);
+        chromosome.mae = mae;
+        fitness
+    }
+
+    // Phenotype hashing left out for MSE and MAE as they are not used for optimisation and are just extra logging metrics
+    fn evaluate_mse(
+        &self,
+        chromosome: &mut Chromosome,
+        active_node_func: Rc<Box<dyn ChromosomeActiveNode<f32>>>,
+        inputs: &Vec<Vec<f32>>,
+        labels: &Vec<Vec<f32>>,
+        function_set: Rc<Vec<Box<dyn Function<f32>>>>,
+    ) -> f32 {
+        let mut outputs = self.forward_pass(chromosome, active_node_func, inputs, Rc::clone(&function_set));
+
+        let output_start_id = chromosome.params.nbr_inputs + chromosome.params.graph_width;
+        let output_end_id = output_start_id + chromosome.params.nbr_outputs;
+
+        let mut outs: Vec<Vec<f32>> = Vec::with_capacity(chromosome.params.nbr_outputs);
+        for out_id in output_start_id..output_end_id {
+            outs.push(outputs.remove(&out_id).unwrap());
+        }
+
+        if outs.is_empty() || outs[0].is_empty() {
+            return f32::MAX;
+        }
+
+        for row in &outs {
+            for &val in row {
+                if val.is_nan() || val.is_infinite() {
+                    return f32::MAX;
+                }
+            }
+        }
+
+        let nbr_samples = outs[0].len();
+        let is_single_output = outs.len() == 1;
+        let mut total_sq_error: f32 = 0.0;
+
+        if is_single_output {
+            for sample_idx in 0..nbr_samples {
+                let target_val = labels[0][sample_idx];
+                let pred_val = outs[0][sample_idx];
+                total_sq_error += (pred_val - target_val).powi(2);
+            }
+            let mse = total_sq_error / nbr_samples as f32;
+            if mse.is_nan() || mse.is_infinite() { f32::MAX } else { mse }
+        } else {
+            let nbr_classes = outs.len();
+            for sample_idx in 0..nbr_samples {
+                let target_class = if labels.len() == 1 {
+                    labels[0][sample_idx].round() as usize
+                } else {
+                    let mut best_label_idx = 0;
+                    let mut max_label_val = labels[0][sample_idx];
+                    for class_idx in 1..labels.len() {
+                        if labels[class_idx][sample_idx] > max_label_val {
+                            max_label_val = labels[class_idx][sample_idx];
+                            best_label_idx = class_idx;
+                        }
+                    }
+                    best_label_idx
+                };
+
+                for class_idx in 0..nbr_classes {
+                    let target_val = if class_idx == target_class { 1.0 } else { 0.0 };
+                    let pred_val = outs[class_idx][sample_idx];
+                    total_sq_error += (pred_val - target_val).powi(2);
+                }
+            }
+            let mse = total_sq_error / (nbr_samples * nbr_classes) as f32;
+            if mse.is_nan() || mse.is_infinite() { f32::MAX } else { mse }
+        }
+    }
+}
+
+impl ChromosomeEvaluatorClassification {
+    fn forward_pass<T: Clone>(
+        &self,
+        chromosome: &mut Chromosome,
+        active_node_func: Rc<Box<dyn ChromosomeActiveNode<T>>>,
+        inputs: &Vec<Vec<T>>,
+        function_set: Rc<Vec<Box<dyn Function<T>>>>,
+    ) -> HashMap<usize, Vec<T>, BuildNoHashHasher<usize>> {
+        active_node_func.execute(chromosome, Rc::clone(&function_set));
+
+        let mut outputs: HashMap<usize, Vec<T>, BuildNoHashHasher<usize>> = HashMap::with_capacity_and_hasher(
+            chromosome.params.nbr_inputs + chromosome.params.graph_width + chromosome.params.nbr_outputs,
+            BuildNoHashHasher::default(),
+        );
+
+        for node_id in &chromosome.active_nodes {
+            let current_node: &CGPNode = &chromosome.nodes_grid[*node_id];
+
+            match current_node.node_type {
+                NodeType::InputNode => {
+                    outputs.insert(*node_id, inputs[*node_id].clone());
+                }
+                NodeType::OutputNode => {
+                    let con1 = current_node.connection0;
+                    let prev_output1 = outputs.get(&con1).unwrap();
+                    outputs.insert(*node_id, prev_output1.clone());
+                }
+                NodeType::ComputationalNode => {
+                    let prev_output1 = outputs.get(&current_node.connection0).unwrap();
+                    let calculated_result: Vec<T>;
+                    let function = &function_set[current_node.function_id];
+
+                    if function.get_number_inputs_needed() == 2 {
+                        let prev_output2 = outputs.get(&current_node.connection1).unwrap();
+                        calculated_result = function.execute_function(&[prev_output1, prev_output2]);
+                    } else {
+                        calculated_result = function.execute_function(&[prev_output1]);
+                    }
+                    outputs.insert(*node_id, calculated_result);
+                }
+            }
+        }
+
+        outputs
+    }
+}

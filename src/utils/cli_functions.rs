@@ -61,6 +61,11 @@ pub struct DatasetArgs {
     pub dataset_type: String,
 
     #[arg(long,
+        default_value = "regression",
+        help = "Default options: regression or classification")]
+    pub problem_type: String,
+
+    #[arg(long,
         default_value = "abalone",
         help = "Default options include:
         - Parity,
@@ -137,7 +142,8 @@ pub struct SelectionArgs {
         help = "Default options include:
         - OnePlusFour,
         - MuPlusLambda,
-        - MuCommaLambda (including elitists),
+        - MuCommaLambda (standard comma selection),
+        - ElitistMuCommaLambda (including parent elitists),
         - Tournament (includes elitists; tournament draws from both elitists and normal population),
         - SAGA4Full (selection based on age alone, all survivors are parents),
         - SAGA4Random (random selection),

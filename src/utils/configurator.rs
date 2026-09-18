@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use crate::components::cgp_components::cgp_node_mutation_operators::{NodeMutationDAG, NodeMutationOperator, NodeMutationGeneral};
 use crate::components::cgp_components::cgp_types::CGPType;
-use crate::components::cgp_components::chromosome_evaluator_operators::{ChromosomeEvaluatorGeneral, ChromosomeEvaluation};
+use crate::components::cgp_components::chromosome_evaluator_operators::{ChromosomeEvaluatorGeneral, ChromosomeEvaluatorClassification, ChromosomeEvaluation};
 use crate::components::cgp_components::chromosome_find_active_node_operators::{ChromosomeActiveNode, ChromosomeFindActiveNodesDAG, ChromosomeFindActiveNodesGeneral};
 use crate::components::cgp_components::chromosome_mutation_operators::{ChromosomeMutation, ChromosomeMutationMultiN, ChromosomeMutationPoint, ChromosomeMutationSingle, ChromosomeMutationSplit, ChromosomeMutationSplitAdaptive};
 use crate::components::evo_operators_for_population::adaptation_operators::adaptation_trait::GeneralAdaptation;
@@ -45,10 +45,11 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         _ => panic!("Unsupported cgp type"),
     };
 
-    let fitness_threshold = match args.dataset_args.dataset_type.as_str() {
-        "bool" => 0.000_1,
-        "f32" => 0.01,
-        _ => { panic!("Unsupported dataset type") }
+    let fitness_threshold = match args.dataset_args.problem_type.as_str() {
+        "bool" | "boolean" => 0.000_1,
+        "regression" => 0.05,
+        "classification" => 0.01,
+        _ => { panic!("Unsupported problem type") }
     };
 
     let selection_type = match args.selection_args.selection_type.as_str() {
@@ -90,13 +91,18 @@ pub fn make_cgp_params(args: &Cli, nbr_inputs: usize, nbr_outputs: usize, number
         "BaeckBothAdaptive" => AdaptationTypes::BaeckBothAdaptive,
         _ => { panic!("Unsupported adaptation type") }
     };
-    
+
     let restart_type = match args.restart_args.restart_type.as_str() {
         "None" => RestartTypes::None,
         "Phenotype" => RestartTypes::PhenotypicDiversityRestart,
         _ => { panic!("unsupported restart type") }
     };
 
+    let nbr_outputs = if args.dataset_args.problem_type == "classification" {
+        crate::datasets::loader::get_dataset_num_classes(&args.dataset_args.dataset)
+    } else {
+        nbr_outputs
+    };
 
     CgpParameters {
         // General CGP related parameters
@@ -193,6 +199,14 @@ pub fn get_chromosome_mutation_operator(params: &CgpParameters) -> Box<dyn Chrom
         MutationTypes::Split => ChromosomeMutationSplit::new(),
         MutationTypes::Multi => ChromosomeMutationMultiN::new(),
         MutationTypes::SplitAdaptive => ChromosomeMutationSplitAdaptive::new(),
+    }
+}
+
+pub fn get_chromosome_evaluator_operator(args: &Cli) -> Box<dyn ChromosomeEvaluation<f32>> {
+    if args.dataset_args.problem_type == "classification" {
+        Box::new(ChromosomeEvaluatorClassification)
+    } else {
+        Box::new(ChromosomeEvaluatorGeneral)
     }
 }
 

@@ -20,6 +20,7 @@ pub struct Chromosome
     pub active_mutation_rate: f32, // used for self-adaptive mutation of active nodes
     pub inactive_mutation_rate: f32, // used for mutation of inactive nodes (coupled, static, or self-adaptive)
     pub phenotype_hash: u64, // used to calculate phenotypic diversity
+    pub mae: f32, // cached MAE metric calculated during evaluation
 }
 
 
@@ -88,6 +89,7 @@ impl Chromosome {
             active_mutation_rate,
             inactive_mutation_rate,
             phenotype_hash: u64::MAX,
+            mae: 0.0,
         }
     }
 }
