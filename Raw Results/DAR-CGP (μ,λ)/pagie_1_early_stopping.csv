@@ -1,0 +1,2 @@
+SelectionType,Fold,Seed,Converged,Generations,Evaluations,GenerationBestIndividualFound,AgeBestIndividual,NmbrActiveNodesBestIndividual,Time,BestTrainFitness,TestFitness,TestMSE
+MuCommaLambda,2,3,false,346316,5194839,98494,247822,22,104.88s,0.1141359,0.13098954,0.07579972
